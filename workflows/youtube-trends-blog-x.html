@@ -121,7 +121,7 @@
       <div class="card__icon">📝</div>
       <div class="card__role">Blog destination</div>
       <h3 class="card__title">Blogger (Google)</h3>
-      <p class="card__text">Create a blog at <a href="https://www.blogger.com" target="_blank">blogger.com</a>. Enable the Blogger API in Google Cloud Console, create an OAuth 2.0 client with the <code>blogger</code> scope, and grab the numeric <strong>blog ID</strong> from the Blogger dashboard URL.</p>
+      <p class="card__text">Create a blog at <a href="https://www.blogger.com" target="_blank">blogger.com</a>. Enable the Blogger API in Google Cloud Console, create an OAuth 2.0 client with the <code>blogger</code> scope, and grab the numeric <strong>blog ID</strong> from the Blogger dashboard URL. <strong>Live demo blog</strong> produced by this workflow: <a href="https://lovepoemscreator.blogspot.com/" target="_blank">lovepoemscreator.blogspot.com</a> — every post there was drafted and published end-to-end by the nodes below.</p>
     </div>
     <div class="card card--light">
       <div class="card__icon">🔀</div>
@@ -360,6 +360,7 @@
         <p class="node-row__text">Sends a signed OAuth2 request to Blogger with a JSON body containing <code>title</code> and <code>content</code> from the agent's blog output. Uses n8n's generic OAuth2 credential — so the same credential works for any Google API, not just Blogger.</p>
         <div class="node-row__meta">
           <div class="node-row__meta-item"><span class="node-row__label">Out</span>Published post URL in response</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Live example</span>Every entry on <a href="https://lovepoemscreator.blogspot.com/" target="_blank">lovepoemscreator.blogspot.com</a> was published by this node.</div>
           <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>Blogger OAuth2.</div>
         </div>
       </div>
