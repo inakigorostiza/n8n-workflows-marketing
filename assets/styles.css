@@ -414,18 +414,16 @@ code {
 
 /* ========== Workflow canvas screenshot ========== */
 .workflow-shot {
-  margin: 1.5rem 0 2rem;
+  max-width: 720px;
+  margin: 1.5rem auto 2rem;
   background: #f3f5f8;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: .75rem;
 }
 .workflow-shot img {
   display: block;
-  min-width: 820px;
-  max-width: 100%;
+  width: 100%;
   height: auto;
   border-radius: var(--radius-sm);
 }
