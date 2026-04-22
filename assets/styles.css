@@ -412,6 +412,32 @@ code {
 }
 .node-row__label--warn { color: var(--ie-red); }
 
+/* ========== Workflow canvas screenshot ========== */
+.workflow-shot {
+  margin: 1.5rem 0 2rem;
+  background: #f3f5f8;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.workflow-shot img {
+  display: block;
+  min-width: 820px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.workflow-shot__caption {
+  margin-top: .75rem;
+  color: var(--ink-4);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  text-align: center;
+}
+
 /* ========== Buttons ========== */
 .btn {
   display: inline-flex;
