@@ -212,6 +212,13 @@ code {
 .card--light .card__role  { color: var(--ie-blue); }
 .card--light .card__title { color: var(--ink); }
 .card--light .card__text  { color: var(--ink-3); }
+.card--light a {
+  color: var(--ie-blue);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.card--light a:hover { color: var(--ie-blue-2); }
 .card--light code { background: var(--bg-soft); color: var(--ink); }
 
 /* ========== Flow steps ========== */
