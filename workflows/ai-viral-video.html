@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Viral Video — NanoBanana × VEO 3.1 × Buffer · n8n Workflows for Marketing</title>
+  <meta name="description" content="Step-by-step guide: a Telegram-triggered n8n workflow that turns a reference image and a short caption into a 9:16 AI-generated video published to X, via Gemini NanoBanana, Google Veo 3.1 and Buffer." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<header class="hero">
+  <a class="back-link" href="../index.html">← All workflows</a>
+  <div class="hero__eyebrow">
+    <img class="hero__eyebrow-logo" src="../assets/ie-logo.svg" alt="IE Business School" />
+    <span class="hero__eyebrow-divider" aria-hidden="true"></span>
+    <span>n8n Workflows for Marketing · Workflow 02</span>
+  </div>
+  <h1 class="hero__title">Reference image<br>to viral <span class="accent">AI video</span>.</h1>
+  <p class="hero__lead">
+    A Telegram-triggered n8n workflow that turns a reference image plus a short caption into a branded, 9:16 AI-generated video — published straight to X (Twitter) via Buffer. Image generation by Google Gemini 2.5 Flash Image ("NanoBanana"), video generation by Google Veo 3.1, script writing by GPT-4.1-mini. End-to-end run time: under 5 minutes.
+  </p>
+  <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:2rem;">
+    <a class="btn btn--primary" href="ai-viral-video.json" download>
+      Download the workflow (.json)
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </a>
+    <a class="btn btn--ghost" href="../credentials.html">Credentials setup →</a>
+    <a class="btn btn--ghost" href="#anatomy">Jump to node anatomy</a>
+  </div>
+</header>
+
+<!-- ============================== §01 OVERVIEW ============================== -->
+<section class="section" id="overview">
+  <div class="sec-header">
+    <div class="sec-num">01</div>
+    <div>
+      <span class="sec-eyebrow">Overview</span>
+      <h2 class="sec-title">What this workflow does.</h2>
+      <p class="sec-lead">Three sequential steps, triggered by a single Telegram message carrying a photo + caption. The entire pipeline runs in one execution — user message in, video published out.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card__icon">🖼️</div>
+      <div class="card__role">Step 1 · ~20 s</div>
+      <h3 class="card__title">Image generation</h3>
+      <p class="card__text">OpenAI Vision analyses the reference photo. A GPT-4.1-mini agent writes a UGC-style image prompt. Google Gemini 2.5 Flash Image ("NanoBanana") generates a fresh, casual-looking image. The result is posted back to you in Telegram so you can approve before the video kicks off.</p>
+    </div>
+    <div class="card">
+      <div class="card__icon">🎬</div>
+      <div class="card__role">Step 2 · ~2-4 min</div>
+      <h3 class="card__title">Video generation</h3>
+      <p class="card__text">A second AI agent drafts a structured video script (prompt, caption, title, hashtags). Google Veo 3.1 renders a 9:16, 8-second video using the NanoBanana image as its first frame. A polling loop keeps checking the long-running operation until the video is ready.</p>
+    </div>
+    <div class="card">
+      <div class="card__icon">🚀</div>
+      <div class="card__role">Step 3 · ~5 s</div>
+      <h3 class="card__title">Publish + notify</h3>
+      <p class="card__text">The finished video is hosted temporarily on Telegram to obtain a public URL, then published to X (Twitter) through Buffer's GraphQL API with the AI-written caption and hashtags. A final Telegram message confirms success with a link to the post in Buffer.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--tip">
+    <div class="callout__icon">💡</div>
+    <div class="callout__body">
+      <h4>Why Telegram as the interface?</h4>
+      <p>It's the fastest way for a non-technical marketer to trigger a complex pipeline. No dashboard, no login — just send a picture to the bot with a caption describing the video you want. The bot replies with the image, then a few minutes later with the finished video and a "published" confirmation.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--warn">
+    <div class="callout__icon">💰</div>
+    <div class="callout__body">
+      <h4>Heads-up on cost</h4>
+      <p>Each run costs approximately <strong>$3.30</strong> (mostly Veo 3.1) or <strong>$1.70</strong> if you switch to <code>veo-3.1-fast-generate-preview</code> — this workflow already uses the Fast model. Set a daily spend cap in Google AI Studio before giving the bot to students.</p>
+    </div>
+  </div>
+
+  <h3 class="h-sub">The workflow on the canvas</h3>
+  <p style="color:var(--ink-3); max-width:720px;">This is what the three flows look like after you import the JSON. The orange sticky on the left is the in-canvas README; the three grey bands group the nodes of each step.</p>
+  <figure class="workflow-shot">
+    <img src="../assets/viral-video-canvas.png" alt="n8n canvas for the AI Viral Video workflow: three sticky-note bands labelled Create Image with NanoBanana, Generate Video with VEO 3.1, and Publish with Buffer, plus a long orange documentation sticky on the left." />
+    <figcaption class="workflow-shot__caption">Three sticky-note bands · Flow A (top) → Flow B (middle) → Flow C (bottom) · long orange sticky = in-canvas README</figcaption>
+  </figure>
+</section>
+
+<!-- ============================== §02 PREREQUISITES ============================== -->
+<section class="section" id="prereqs">
+  <div class="sec-header">
+    <div class="sec-num">02</div>
+    <div>
+      <span class="sec-eyebrow">Prerequisites</span>
+      <h2 class="sec-title">Five services to wire up.</h2>
+      <p class="sec-lead">Detailed setup for each is in the central <a href="../credentials.html">Credentials reference</a>. A quick summary below.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card card--light">
+      <div class="card__icon">💬</div>
+      <div class="card__role">Interface</div>
+      <h3 class="card__title">Telegram bot</h3>
+      <p class="card__text">Create via <a href="https://t.me/botfather" target="_blank">@BotFather</a>: <code>/newbot</code>, pick a name, copy the HTTP API token. Send the bot a <code>/start</code> message from your own account so it can chat with you.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">🟠</div>
+      <div class="card__role">Image + video generation</div>
+      <h3 class="card__title">Google AI Studio (Gemini)</h3>
+      <p class="card__text">At <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>, create an API key with <strong>billing enabled</strong>. The same key covers Gemini 2.5 Flash Image (NanoBanana) and Veo 3.1. Veo is paid-tier only — confirm billing is active before running.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon card__icon--logo"><img src="../assets/claude-logo.svg" alt="OpenAI" style="filter: grayscale(1) brightness(.5)"></div>
+      <div class="card__role">Script + vision</div>
+      <h3 class="card__title">OpenAI</h3>
+      <p class="card__text">The same OpenAI key from Workflow 01 works. Used here for GPT-4o Vision (analysing the reference image) and GPT-4.1-mini (both agents).</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">🔀</div>
+      <div class="card__role">Social publishing</div>
+      <h3 class="card__title">Buffer</h3>
+      <p class="card__text">Reuse the Buffer access token from Workflow 01. You'll also need your X channel ID (copy it from the channel's URL in Buffer Publish).</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">🤖</div>
+      <div class="card__role">Host</div>
+      <h3 class="card__title">n8n</h3>
+      <p class="card__text">Must be publicly reachable so Telegram can POST to the trigger's webhook. n8n Cloud works out of the box; self-hosted needs a public URL (ngrok, Cloudflare Tunnel, or a deployed instance).</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">⚠️</div>
+      <div class="card__role">Not needed here</div>
+      <h3 class="card__title">Google OAuth</h3>
+      <p class="card__text">Unlike Workflow 01, this one does <em>not</em> touch YouTube, Sheets or Blogger. No Google Cloud OAuth client required.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §03 QUICK START ============================== -->
+<section class="section" id="quick-start">
+  <div class="sec-header">
+    <div class="sec-num">03</div>
+    <div>
+      <span class="sec-eyebrow">Quick start</span>
+      <h2 class="sec-title">Import, paste, run.</h2>
+      <p class="sec-lead">Five steps from zero to a published video.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow__step">
+      <span class="flow__num">01</span>
+      <h5>Download + import</h5>
+      <p>Save <a href="ai-viral-video.json" download>ai-viral-video.json</a>. In n8n: <strong>Workflows → Import from File</strong>.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">02</span>
+      <h5>Open the Set node</h5>
+      <p>Open the <strong>Set: Bot Token (Placeholder)</strong> node. Replace the five <code>REPLACE_WITH_*</code> placeholders: Telegram bot token, Gemini API key, Buffer access token, Buffer channel ID, Buffer organization ID.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">03</span>
+      <h5>Link credentials</h5>
+      <p>Each Telegram node and each OpenAI node wants a credential. Pick your <strong>Telegram API</strong> and <strong>OpenAI API</strong> credentials (create them from the panel if you haven't yet).</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">04</span>
+      <h5>Activate the workflow</h5>
+      <p>Click <strong>Active</strong> (top-right). The Telegram trigger is a webhook — it only fires while the workflow is active.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">05</span>
+      <h5>Send your bot a photo</h5>
+      <p>Open your bot in Telegram, send a reference image with a caption like <em>"a woman running on a beach at sunset"</em>. Watch the canvas light up.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--warn">
+    <div class="callout__icon">⚠️</div>
+    <div class="callout__body">
+      <h4>Veo's audio safety filter</h4>
+      <p>Avoid prompts that describe <em>music</em>, <em>dialogue</em>, <em>voiceover</em>, <em>sfx</em>, or <em>sound</em> — Veo's audio RAI filter is aggressive and will block the generation. The <code>Prepare Veo Request Body</code> code node already strips these words defensively, but keep your captions clean too.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §04 ANATOMY ============================== -->
+<section class="section" id="anatomy">
+  <div class="sec-header">
+    <div class="sec-num">04</div>
+    <div>
+      <span class="sec-eyebrow">Node anatomy</span>
+      <h2 class="sec-title">29 nodes, three flows.</h2>
+      <p class="sec-lead">Detailed walkthrough of every functional node in the canvas. Four sticky notes are documentation only and not covered here.</p>
+    </div>
+  </div>
+
+  <h3 class="h-sub">Flow A · Image creation with NanoBanana</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A1</span><span class="node-row__emoji">💬</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Telegram Trigger: Receive Video Idea</h4>
+        <div class="node-row__kind">n8n-nodes-base.telegramTrigger · updates: message</div>
+        <p class="node-row__text">The workflow's entry point. Fires whenever your bot receives a message. The trigger exposes <code>message.photo[]</code> (array of progressively larger thumbnails), <code>message.caption</code> (text), and <code>message.chat.id</code> (used later to reply to the same chat).</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · Telegram message payload</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>Telegram API — linked after import.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A2</span><span class="node-row__emoji">📌</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Set: Bot Token (Placeholder)</h4>
+        <div class="node-row__kind">n8n-nodes-base.set · Edit Fields</div>
+        <p class="node-row__text">The single source of truth for every ID and token used downstream: <code>YOUR_BOT_TOKEN</code>, <code>gemini_api_key</code>, <code>buffer_access_token</code>, <code>buffer_channel_id_x</code>, <code>buffer_organization_id</code>, plus <code>CAPTION</code> (auto-populated from the Telegram message). Edit this one node to retarget the workflow; every downstream reference updates automatically.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Gotcha</span>Five placeholders to replace. Doing this once here saves editing 10+ downstream nodes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A3</span><span class="node-row__emoji">🔗</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Telegram API: Get File URL</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET api.telegram.org/bot{TOKEN}/getFile</div>
+        <p class="node-row__text">Telegram's photo array returns <em>file_ids</em>, not URLs. This node calls <code>getFile</code> with the largest thumbnail's <code>file_id</code> to get a <code>file_path</code> we can assemble into a downloadable URL.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A4</span><span class="node-row__emoji">👁️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">OpenAI Vision: Analyze Reference Image</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.openAi · resource: image · operation: analyze · gpt-4o</div>
+        <p class="node-row__text">Sends the resolved Telegram image URL to GPT-4o Vision with a prompt that asks for <strong>YAML output only</strong>, describing the subject (product or character), colour scheme, fonts or outfit, and a short visual description. YAML is easier for the next agent to consume than free-form prose.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · <code>content</code> with YAML</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>OpenAI API.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A5</span><span class="node-row__emoji">🧠</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Generate Image Prompt</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.agent · promptType: define</div>
+        <p class="node-row__text">An agent that combines the user's caption and the YAML image analysis into a single UGC-style image prompt (≤120 words). The system message enforces style rules: casual tone, handheld framing, preserve product text exactly, no copyrighted character names. Wired to two sub-nodes: <strong>LLM: OpenAI Chat</strong> (gpt-4.1-mini) and <strong>LLM: Structured Output Parser</strong> (JSON schema with a single <code>image_prompt</code> field).</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · <code>output.image_prompt</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A6</span><span class="node-row__emoji">🍌</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">NanoBanana image generator</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · POST generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent</div>
+        <p class="node-row__text">Calls Google's Gemini 2.5 Flash Image model (informally nicknamed <em>NanoBanana</em>) with the UGC image prompt and <code>responseModalities: ["IMAGE"]</code>. Returns the generated image as base64 in <code>candidates[0].content.parts[*].inlineData.data</code>. Auth is via the <code>x-goog-api-key</code> header, reading the key from Vars.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A7</span><span class="node-row__emoji">⏳</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Wait for Image Edit</h4>
+        <div class="node-row__kind">n8n-nodes-base.wait · 2 seconds</div>
+        <p class="node-row__text">A short breather so Gemini's response is fully available to the next code node. Not strictly required on stable connections but cheap insurance.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A8</span><span class="node-row__emoji">💾</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Download Edited Image</h4>
+        <div class="node-row__kind">n8n-nodes-base.code</div>
+        <p class="node-row__text">Extracts the base64 image from Gemini's response and converts it into an n8n <strong>binary</strong> output field. Handles both <code>inlineData</code> and <code>inline_data</code> key names defensively. The binary is reused by the Telegram photo sender (A9) and by Veo as the reference image (B4).</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A9</span><span class="node-row__emoji">📤</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Send Photo to Telegram</h4>
+        <div class="node-row__kind">n8n-nodes-base.telegram · operation: sendPhoto · binaryData: true</div>
+        <p class="node-row__text">Posts the generated image back to the original chat. Serves two purposes: it gives the user an approval moment, and it uploads the image to Telegram's CDN so we can refer to it by file ID later.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A10</span><span class="node-row__emoji">🔗</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Get Telegram File URL</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET api.telegram.org/bot{TOKEN}/getFile</div>
+        <p class="node-row__text">Same trick as A3, but for the just-sent NanoBanana photo. The resulting URL will be fed into Flow B if you need to reference the image by URL rather than base64.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="h-sub">Flow B · Video generation with Veo 3.1</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B1</span><span class="node-row__emoji">📝</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Set Master Prompt</h4>
+        <div class="node-row__kind">n8n-nodes-base.set</div>
+        <p class="node-row__text">Stores a large JSON schema (<code>json_master</code>) describing the full anatomy of a cinematic video prompt: description, style, camera, lighting, environment, elements, subject, motion, VFX, audio, ending, text, format, keywords. The downstream agent uses this as inspiration for what to write, even though the final output is a simpler 4-field JSON.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B2</span><span class="node-row__emoji">🎭</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">AI Agent: Generate Video Script</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.agent · retryOnFail: on</div>
+        <p class="node-row__text">The main script-writing agent. Reads the original user caption and the YAML image analysis, and returns a strict JSON with <code>prompt</code> (100-150 word natural-language video description), <code>caption</code> (1-2 sentence social post), <code>title</code> (3-8 words), and <code>hashtags</code> (5-10 tags). The system message explicitly forbids mentioning music, SFX or dialogue to avoid triggering Veo's audio filter. Wired to three sub-nodes: <strong>OpenAI Chat Model</strong> (gpt-4.1-mini), <strong>Think</strong> (reasoning tool), and <strong>Structured Output Parser</strong>.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B3</span><span class="node-row__emoji">🧾</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Parse GPT Response</h4>
+        <div class="node-row__kind">n8n-nodes-base.code</div>
+        <p class="node-row__text">Normalises the agent's output into a predictable shape regardless of whether LangChain returns the new <code>{output: {…}}</code> format or the older raw OpenAI format. Also normalises hashtags: splits on whitespace/commas, removes duplicates, prepends <code>#</code> if missing, joins into <code>hashtags_string</code>.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B4</span><span class="node-row__emoji">⚙️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Optimize Prompt for Veo</h4>
+        <div class="node-row__kind">n8n-nodes-base.set</div>
+        <p class="node-row__text">Appends Veo-friendly technical cues to the raw prompt: <em>"consistent character throughout, photorealistic quality, professional cinematography, 8 seconds duration, 9:16 aspect ratio, 24fps"</em>. Writes the result to <code>veo_prompt</code> while keeping all other fields via <code>includeOtherFields</code>.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B5</span><span class="node-row__emoji">🛡️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Prepare Veo Request Body</h4>
+        <div class="node-row__kind">n8n-nodes-base.code</div>
+        <p class="node-row__text">Defensive cleanup — strips any remaining audio-related words (music, soundtrack, voiceover, dialogue, speaking, singing, sfx…) that could trigger Veo's RAI filter. Validates the prompt length (≥10 chars) and wraps the clean prompt in the Veo request schema (<code>duration: 8</code>, <code>aspect_ratio: "9:16"</code>).</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B6</span><span class="node-row__emoji">🎥</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Veo Generation</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · POST models/veo-3.1-fast-generate-preview:predictLongRunning</div>
+        <p class="node-row__text">Kicks off Google Veo 3.1 Fast (image-to-video). Sends the clean prompt + the NanoBanana image (as base64) as the first-frame reference. Parameters: <code>aspectRatio: "9:16"</code>, <code>durationSeconds: 8</code>, <code>personGeneration: "allow_adult"</code>. Returns an operation <code>name</code> — the video is generated asynchronously and must be polled.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · <code>name</code> of the long-running operation</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Timeout</span>60 seconds on the start call; the render itself continues for minutes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B7</span><span class="node-row__emoji">⏳</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Wait</h4>
+        <div class="node-row__kind">n8n-nodes-base.wait · 15 seconds</div>
+        <p class="node-row__text">Gives Veo room to work between polls. Combined with the If-loop below, this produces a polling interval of ~15-20 seconds until the operation completes.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B8</span><span class="node-row__emoji">📡</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Check Veo Status</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET generativelanguage.googleapis.com/v1beta/{operation-name}</div>
+        <p class="node-row__text">Polls the operation from B6 by name. Response contains <code>done</code> (boolean) and, when done, a <code>generateVideoResponse</code> block with <code>generatedSamples[0].video.uri</code> — the download URL for the finished clip.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B9</span><span class="node-row__emoji">🔀</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">If</h4>
+        <div class="node-row__kind">n8n-nodes-base.if · leftValue: $json.done · operator: true</div>
+        <p class="node-row__text">Branches on <code>done</code>. True → Download Video (B10). False → back to Wait (B7). The loop typically runs 8-16 times for an 8-second clip.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B10</span><span class="node-row__emoji">⬇️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Download Video</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET the video URI · responseFormat: file</div>
+        <p class="node-row__text">Downloads the MP4. The URL is built on the fly by appending <code>&amp;key=</code> + the Gemini API key to the URI from B8. A defensive IIFE also throws a human-readable error if Veo blocked the generation (<code>raiMediaFilteredReasons</code>).</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B11</span><span class="node-row__emoji">📤</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Send Video to Telegram</h4>
+        <div class="node-row__kind">n8n-nodes-base.telegram · operation: sendVideo · caption: "Your video is ready! 🎥"</div>
+        <p class="node-row__text">Posts the MP4 back to the same Telegram chat. As with the photo in Flow A, this also gives us a Telegram-hosted URL we'll need for Buffer.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="h-sub">Flow C · Publish with Buffer + notify</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C1</span><span class="node-row__emoji">🔗</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Get Video File URL</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET api.telegram.org/bot{TOKEN}/getFile</div>
+        <p class="node-row__text">Retrieves the <code>file_path</code> of the just-sent Telegram video so we can build a public URL: <code>https://api.telegram.org/file/bot{TOKEN}/{file_path}</code>. This URL is what Buffer will download the video from.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C2</span><span class="node-row__emoji">✈️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Buffer: Publish Video</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · POST api.buffer.com/graphql</div>
+        <p class="node-row__text">Calls Buffer's <code>createPost</code> GraphQL mutation with the X channel ID, the AI-written caption + hashtags (concatenated), <code>mode: "shareNow"</code>, and the Telegram video URL in <code>assets.videos[]</code>. Returns <code>post.id</code> and <code>status</code>.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Gotcha</span>Buffer's media URLs are downloaded immediately — the Telegram URL must still resolve when Buffer fetches it (few minutes window).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C3</span><span class="node-row__emoji">🔔</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Notify: Post Published</h4>
+        <div class="node-row__kind">n8n-nodes-base.telegram · sendMessage</div>
+        <p class="node-row__text">Final confirmation back to the originator's chat: title, caption, hashtags, Buffer post status, and a direct link to the post on Buffer's dashboard.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================== §05 CUSTOMISE ============================== -->
+<section class="section" id="customise">
+  <div class="sec-header">
+    <div class="sec-num">05</div>
+    <div>
+      <span class="sec-eyebrow">Customise</span>
+      <h2 class="sec-title">Six useful tweaks.</h2>
+      <p class="sec-lead">Each is a single-node change.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card card--light">
+      <div class="card__role">Speed vs. quality</div>
+      <h3 class="card__title">Full Veo instead of Fast</h3>
+      <p class="card__text">In the <strong>Veo Generation</strong> node, change <code>veo-3.1-fast-generate-preview</code> to <code>veo-3.1-generate-preview</code>. ~2x slower, ~2x the cost, noticeably better motion coherence for fast action.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Format</div>
+      <h3 class="card__title">Horizontal 16:9</h3>
+      <p class="card__text">Switch <code>aspectRatio</code> to <code>16:9</code> in both the Veo Generation node and the <strong>Optimize Prompt for Veo</strong> node (the prompt text mentions the aspect ratio explicitly to guide composition).</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Platforms</div>
+      <h3 class="card__title">Publish to LinkedIn + Instagram</h3>
+      <p class="card__text">Duplicate the <strong>Buffer: Publish Video</strong> node, swap the <code>channelId</code> variable for each platform's channel ID, wire all copies after <strong>Get Video File URL</strong>.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Approval gate</div>
+      <h3 class="card__title">Human-in-the-loop before publish</h3>
+      <p class="card__text">Insert a <em>Wait for Webhook</em> + Telegram message after <strong>Send Video to Telegram</strong> asking the user to reply <em>approve</em> or <em>reject</em>. Only fire Buffer on approval.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Voice</div>
+      <h3 class="card__title">Switch to a different image model</h3>
+      <p class="card__text">Replace the NanoBanana HTTP Request with a call to OpenAI's GPT-image-1, Black Forest Labs FLUX, or Stability AI. The rest of the workflow is agnostic — Veo only needs a base64 image to condition on.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Audio</div>
+      <h3 class="card__title">Enable Veo audio generation</h3>
+      <p class="card__text">Veo 3.1 can generate audio natively. Relax the audio-stripping regex in <strong>Prepare Veo Request Body</strong> and add <code>generateAudio: true</code> to the request body's <code>parameters</code>. Expect ~1.5x render time.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__brand">
+      <img src="../assets/ie-logo.svg" alt="IE Business School" />
+      n8n Workflows for Marketing
+    </div>
+    <div>
+      Reference project for the <strong>AI Marketing Lab</strong> · IE Business School.<br>
+      <a href="../index.html">← All workflows</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -18,6 +18,7 @@ Each workflow ships with:
 | # | Workflow | What it does | Nodes |
 |---|----------|--------------|-------|
 | 01 | [Trending topics → Blog + X post](workflows/youtube-trends-blog-x.html) | Pulls YouTube + Google Trends, drafts copy with GPT-4.1-mini, publishes via Blogger + Buffer. | 14 |
+| 02 | [AI Viral Video — NanoBanana × Veo 3.1 × Buffer](workflows/ai-viral-video.html) | Telegram-triggered: reference image + caption → Gemini NanoBanana still → Google Veo 3.1 video (9:16 / 8s) → published to X via Buffer. | 29 |
 
 ## Credentials
 

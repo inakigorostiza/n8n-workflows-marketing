@@ -1,0 +1,625 @@
+{
+  "name": "AI Viral Video — NanoBanana × VEO 3.1 × Buffer",
+  "nodes": [
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "gpt-4.1-mini" },
+        "options": {}
+      },
+      "id": "b1045d28-3ceb-4ba7-8469-c2a02fc6237f",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [-800, 400],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "5030ce64-22ce-4513-b50a-fe9ef967264a",
+      "name": "Think",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "position": [-656, 400],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"prompt\": \"string\",\n  \"caption\": \"string\",\n  \"title\": \"string\",\n  \"hashtags\": \"string\"\n}"
+      },
+      "id": "58bbd8b3-cbf5-444b-8e25-9c12578f5046",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [-528, 400],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "39833f2b-c516-46d5-85f3-f6f0bdb0ee26",
+      "name": "Telegram Trigger: Receive Video Idea",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [-944, -240],
+      "webhookId": "REPLACE_WITH_TELEGRAM_WEBHOOK_ID",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc2e0500-57b1-4615-82cb-1c950e5f2ec4",
+              "name": "json_master",
+              "type": "string",
+              "value": "={\n  \"description\": \"Brief narrative description of the scene, focusing on key visual storytelling and product transformation.\",\n  \"style\": \"cinematic | photorealistic | stylized | gritty | elegant\",\n  \"camera\": {\n    \"type\": \"fixed | dolly | Steadicam | crane combo\",\n    \"movement\": \"describe any camera moves like slow push-in, pan, orbit\",\n    \"lens\": \"optional lens type or focal length for cinematic effect\"\n  },\n  \"lighting\": {\n    \"type\": \"natural | dramatic | high-contrast\",\n    \"sources\": \"key lighting sources (sunset, halogen, ambient glow...)\",\n    \"FX\": \"optional VFX elements like fog, reflections, flares\"\n  },\n  \"environment\": {\n    \"location\": \"describe location or room (kitchen, desert, basketball court...)\",\n    \"set_pieces\": [\n      \"list of key background or prop elements\",\n      \"e.g. hardwood floors, chain-link fence, velvet surface\"\n    ],\n    \"mood\": \"describe the ambient atmosphere (moody, clean, epic...)\"\n  },\n  \"elements\": [\n    \"main physical items involved (product box, accessories, vehicles...)\",\n    \"include brand visibility (logos, packaging, texture...)\"\n  ],\n  \"subject\": {\n    \"character\": {\n      \"description\": \"optional — physical description, outfit\",\n      \"pose\": \"optional — position or gesture\",\n      \"lip_sync_line\": \"optional — spoken line if there's a voiceover\"\n    },\n    \"product\": {\n      \"brand\": \"Brand name\",\n      \"model\": \"Product model or name\",\n      \"action\": \"description of product transformation or assembly\"\n    }\n  },\n  \"motion\": {\n    \"type\": \"e.g. transformation, explosion, vortex\",\n    \"details\": \"step-by-step visual flow of how elements move or evolve\"\n  },\n  \"VFX\": {\n    \"transformation\": \"optional — describe style (neon trails, motion blur...)\",\n    \"impact\": \"optional — e.g. shockwave, glow, distortion\",\n    \"particles\": \"optional — embers, sparks, thread strands...\",\n    \"environment\": \"optional — VFX affecting the scene (ripples, wind...)\"\n  },\n  \"audio\": {\n    \"music\": \"optional — cinematic score, trap beat, ambient tone\",\n    \"sfx\": [\n      \"list of sound effects (zip, pop, woosh...)\"\n    ],\n    \"ambience\": \"optional — background soundscape (traffic, wind...)\",\n    \"voiceover\": {\n      \"delivery\": \"tone and style (confident, whisper, deep...)\",\n      \"line\": \"text spoken if applicable\"\n    }\n  },\n  \"ending\": \"Final shot description — what is seen or felt at the end (freeze frame, logo pulse, glow...)\",\n  \"text\": \"none | overlay | tagline | logo pulse at end only\",\n  \"format\": \"16:9 | 4k | vertical\",\n  \"keywords\": [\n    \"brand\",\n    \"scene style\",\n    \"motion type\",\n    \"camera style\",\n    \"sound mood\",\n    \"target theme\"\n  ]\n}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1694617c-8bf2-4fb9-b8be-de5252fbbc32",
+      "name": "Set Master Prompt",
+      "type": "n8n-nodes-base.set",
+      "position": [-928, 208],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a UGC-style video prompt using both the reference image and the user description.\n\n**Inputs**\n- User description (optional):\n  `{{ $('Telegram Trigger: Receive Video Idea').item.json.message.caption }}`\n- Reference image analysis (stay strictly faithful to what's visible):\n  `{{ $('OpenAI Vision: Analyze Reference Image').item.json.content }}`\n\n**Rules**\n- Keep the style casual, authentic, and realistic. Avoid studio-like or cinematic language.\n- Default model: `veo3.1` (unless otherwise specified).\n- Output only **one JSON object** with the key: `video_prompt`.\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Return EXACTLY this JSON (no wrapper, no markdown, no prose):\n{\n  \"prompt\": \"<natural-language 100-150 word description of the video scene: subject, action, setting, lighting, camera style. NO mentions of music, sfx, dialogue, or audio.>\",\n  \"caption\": \"<short social post, 1-2 sentences>\",\n  \"title\": \"<3-8 word title>\",\n  \"hashtags\": \"<5-10 hashtags as space-separated string>\"\n}"
+        }
+      },
+      "id": "e41cce75-274f-4af2-bd03-abcbc84d1eed",
+      "name": "AI Agent: Generate Video Script",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-720, 208],
+      "typeVersion": 2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "content": "# 🎬 STEP 2 — Generate Video with VEO 3.1",
+        "height": 428,
+        "width": 2588,
+        "color": 7
+      },
+      "id": "1bf04d8a-87ba-4c3e-9172-760b45f89708",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-1008, 112],
+      "typeVersion": 1,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "# 🖼️ STEP 1 — Create Image with NanoBanana\n",
+        "height": 432,
+        "width": 2592,
+        "color": 7
+      },
+      "id": "1ad9279e-1939-4b4f-86c3-2f9ba4ebfc00",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-1008, -336],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af62651a-3fc8-419d-908b-6514f6f4bcb3",
+              "name": "YOUR_BOT_TOKEN",
+              "type": "string",
+              "value": "REPLACE_WITH_TELEGRAM_BOT_TOKEN"
+            },
+            {
+              "id": "588b2c82-50af-41f1-bce2-0f7e627162b0",
+              "name": "fal_api_key",
+              "type": "string",
+              "value": "REPLACE_WITH_FAL_API_KEY"
+            },
+            {
+              "id": "bdb28513-38da-4a61-bffd-aa0f8a165579",
+              "name": "CAPTION",
+              "type": "string",
+              "value": "={{ $('Telegram Trigger: Receive Video Idea').item.json.message.caption }}"
+            },
+            {
+              "id": "c513ab7e-1d83-4cb7-9f83-562538f3cec1",
+              "name": "gemini_api_key",
+              "value": "REPLACE_WITH_GEMINI_API_KEY",
+              "type": "string"
+            },
+            {
+              "id": "a78d95b0-6719-4f4c-8291-20150d8321e1",
+              "name": "buffer_access_token",
+              "value": "REPLACE_WITH_BUFFER_ACCESS_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "8e6c2c81-6d6d-4cbf-a46a-109410a0d581",
+              "name": "buffer_channel_id_x",
+              "value": "REPLACE_WITH_BUFFER_CHANNEL_ID_X",
+              "type": "string"
+            },
+            {
+              "id": "b83110d2-0f62-4a48-a070-fec0733cb785",
+              "name": "buffer_organization_id",
+              "value": "REPLACE_WITH_BUFFER_ORGANIZATION_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4dfac4f-1197-4bbe-b283-5986fbc69eec",
+      "name": "Set: Bot Token (Placeholder)",
+      "type": "n8n-nodes-base.set",
+      "position": [-736, -240],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $json.YOUR_BOT_TOKEN }}/getFile?file_id={{ $('Telegram Trigger: Receive Video Idea').item.json.message.photo[ $('Telegram Trigger: Receive Video Idea').item.json.message.photo.length - 1].file_id }}",
+        "options": {}
+      },
+      "id": "22a36d46-6348-415f-8272-36dc0d9dc865",
+      "name": "Telegram API: Get File URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [-512, -240],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "=You are an image analysis assistant.\n\nYour task is to analyze the given image and output results **only in YAML format**. Do not add explanations, comments, or extra text outside YAML.\n\nRules:\n\n- If the image depicts a **product**, return:\n    \n    ```yaml\n    brand_name: (brand if visible or inferable)\n    color_scheme:\n      - hex: (hex code of each prominent color)\n        name: (descriptive name of the color)\n    font_style: (serif/sans-serif, bold/thin, etc.)\n    visual_description: (1-2 sentences summarizing what is seen, ignoring the background)\n    \n    ```\n    \n- If the image depicts a **character**, return:\n    \n    ```yaml\n    character_name: (name if visible or inferable, else \"unknown\")\n    color_scheme:\n      - hex: (hex code of each prominent color on the character)\n        name: (descriptive name of the color)\n    outfit_style: (clothing style, accessories, or notable features)\n    visual_description: (1-2 sentences summarizing what the character looks like, ignoring the background)\n    \n    ```\n    \n- If the image depicts **both**, return **both sections** in YAML.\n\nOnly output valid YAML. No explanations.",
+        "imageUrls": "=https://api.telegram.org/file/bot{{ $('Set: Bot Token (Placeholder)').first().json.YOUR_BOT_TOKEN }}/{{ $json.result.file_path }}",
+        "options": {}
+      },
+      "id": "c04c3b85-d0f5-4cd1-8e52-2b61baad10bc",
+      "name": "OpenAI Vision: Analyze Reference Image",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [-304, -240],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"image_prompt\": \"string\"\n}"
+      },
+      "id": "74ccc059-732b-4cb0-983d-d481703a1eb4",
+      "name": "LLM: Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [96, -48],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "gpt-4.1-mini" },
+        "options": {}
+      },
+      "id": "f54678de-f086-43b0-8a2c-fca40de07eb0",
+      "name": "LLM: OpenAI Chat",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [-128, -48],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your task is to create an image prompt following the system guidelines.\nEnsure that the reference image is represented as **accurately as possible**, including all text elements.\n\nUse the following inputs:\n\n- **User's description:**\n{{ $('Set: Bot Token (Placeholder)').first().json.CAPTION }}\n\n- **Reference image description:**\n{{ $json.content }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=ROLE: UGC Image Prompt Builder\n\nGOAL:\nGenerate one concise, natural, and realistic image prompt (≤120 words) from a given product or reference image. The prompt must simulate authentic UGC (user-generated content) photography.\n\nRULES:\n- Always output **one JSON object only** with the key:\n  - `image_prompt`: (string with full description)\n- Do **not** add commentary, metadata, or extra keys. JSON only.\n\nSTYLE GUIDELINES:\n- Tone: casual, unstaged, lifelike, handheld snapshot.\n- Camera cues: include at least 2-3 (e.g., phone snapshot, handheld framing, off-center composition, natural indoor light, soft shadows, slight motion blur, auto exposure, unpolished look, mild grain).\n- Realism: embrace imperfections (wrinkles, stray hairs, skin texture, clutter, smudges).\n- Packaging/Text: preserve exactly as visible. Never invent claims, numbers, or badges.\n- Diversity: if people appear but are unspecified, vary gender/ethnicity naturally; default age range = 21-38.\n- Setting: default to real-world everyday spaces (home, street, store, gym, office).\n\nSAFETY:\n- No copyrighted character names.\n- No dialogue or scripts. Only describe scenes.\n\nOUTPUT CONTRACT:\n- JSON only, no prose outside.\n- Max 120 words in `image_prompt`.\n- Must cover: subject, action, mood, setting, style/camera, colors, and text accuracy.\n\nCHECKLIST BEFORE OUTPUT:\n- Natural handheld tone?\n- At least 2 camera cues included?\n- Product text preserved exactly?\n- Only JSON returned?\n\n---\n\n### Example\n\nGood Example :\n```json\n{ \"image_prompt\": \"a young adult casually holding a skincare tube near a bathroom mirror; action: dabs small amount on the back of the hand; mood: easy morning; setting: small apartment bathroom with towel on rack and toothbrush cup; style/camera: phone snapshot, handheld framing, off-center composition, natural window light, slight motion blur, mild grain; colors: soft whites and mint label; text accuracy: keep every word on the tube exactly as visible, no added claims\" }\n"
+        }
+      },
+      "id": "96e50464-6334-4307-8183-8bc22d3c5dfc",
+      "name": "Generate Image Prompt",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-80, -240],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": { "amount": 2 },
+      "id": "0ced96a8-89ae-43bd-b9f2-53b67d102359",
+      "name": "Wait for Image Edit",
+      "type": "n8n-nodes-base.wait",
+      "position": [464, -240],
+      "webhookId": "REPLACE_WITH_WAIT_WEBHOOK_ID",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse responses into { title, prompt, caption, hashtags[], hashtags_string }\nreturn $input.all().map(item => {\n  const data = item.json || {};\n\n  let title = \"\";\n  let prompt = \"\";\n  let caption = \"\";\n  let hashtagsArr = [];\n\n  // 1) NEW FORMAT: { output: { title, prompt, caption, hashtags } }\n  if (data.output) {\n    const o = data.output || {};\n    title = o.title ?? \"\";\n    prompt = o.prompt ?? \"\";\n    caption = o.caption ?? \"\";\n\n    const rawHashtags = o.hashtags ?? [];\n    if (Array.isArray(rawHashtags)) {\n      hashtagsArr = rawHashtags;\n    } else if (typeof rawHashtags === \"string\") {\n      try {\n        const parsedTags = JSON.parse(rawHashtags);\n        if (Array.isArray(parsedTags)) {\n          hashtagsArr = parsedTags;\n        } else {\n          hashtagsArr = rawHashtags.split(/[,\\s]+/).filter(Boolean);\n        }\n      } catch {\n        hashtagsArr = rawHashtags.split(/[,\\s]+/).filter(Boolean);\n      }\n    }\n  }\n\n  // 2) OLD OpenAI FORMAT (fallback)\n  if (!title && !prompt && !caption && hashtagsArr.length === 0) {\n    let content =\n      data?.choices?.[0]?.message?.content ??\n      data?.message?.content ??\n      data?.content ??\n      null;\n\n    if (content && typeof content === \"object\") {\n      title = content.title ?? \"\";\n      prompt = content.prompt ?? \"\";\n      caption = content.caption ?? \"\";\n\n      if (Array.isArray(content.hashtags)) {\n        hashtagsArr = content.hashtags;\n      } else if (typeof content.hashtags === \"string\") {\n        hashtagsArr = content.hashtags.split(/[,\\s]+/).filter(Boolean);\n      }\n    }\n    else if (typeof content === \"string\" && content.trim()) {\n      try {\n        const parsed = JSON.parse(content);\n        title = parsed.title ?? \"\";\n        prompt = parsed.prompt ?? \"\";\n        caption = parsed.caption ?? \"\";\n\n        if (Array.isArray(parsed.hashtags)) {\n          hashtagsArr = parsed.hashtags;\n        } else if (typeof parsed.hashtags === \"string\") {\n          hashtagsArr = parsed.hashtags.split(/[,\\s]+/).filter(Boolean);\n        }\n      } catch {\n        title = \"\";\n        prompt = \"\";\n        caption = \"\";\n        hashtagsArr = [];\n      }\n    }\n  }\n\n  // 3) Normalise hashtags\n  const norm = Array.from(\n    new Set(\n      (hashtagsArr || [])\n        .map(h => (h ?? \"\").toString().trim())\n        .filter(Boolean)\n        .map(h => (h.startsWith(\"#\") ? h : `#${h}`))\n    )\n  );\n\n  const hashtags_string = norm.join(\" \");\n\n  return {\n    json: {\n      title,\n      prompt,\n      caption,\n      hashtags: norm,\n      hashtags_string\n    }\n  };\n});\n"
+      },
+      "id": "bbc5cd3f-7ac4-4382-90c5-2f5e14c72f2a",
+      "name": "Parse GPT Response",
+      "type": "n8n-nodes-base.code",
+      "position": [-368, 208],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "veo_prompt",
+              "type": "string",
+              "value": "={{ $json.prompt }} consistent character throughout, photorealistic quality, professional cinematography, 8 seconds duration, 9:16 aspect ratio, 24fps"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b439f54c-821e-4fba-8b5a-02e1babe5d0f",
+      "name": "Optimize Prompt for Veo",
+      "type": "n8n-nodes-base.set",
+      "position": [-160, 208],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "={{ \n  $('Check Veo Status').first().json.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri \n    ? $('Check Veo Status').first().json.response.generateVideoResponse.generatedSamples[0].video.uri + '&key=' + $('Set: Bot Token (Placeholder)').first().json.gemini_api_key\n    : (() => { throw new Error('Video blocked by safety filter: ' + JSON.stringify($('Check Veo Status').first().json.response?.generateVideoResponse?.raiMediaFilteredReasons || 'unknown reason')) })()\n}}",
+        "options": {
+          "response": {
+            "response": { "responseFormat": "file" }
+          }
+        }
+      },
+      "id": "04b92d18-6f12-481c-aeb1-260f079c140e",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 208],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the optimized prompt from the previous node\nconst prompt = $input.first().json.veo_prompt || $input.first().json.prompt;\n\n// Validate\nif (!prompt || typeof prompt !== 'string' || prompt.length < 10) {\n  throw new Error('Valid prompt required (min 10 characters)');\n}\n\n// Strip any audio-related language that might trigger RAI filters\n// (optional defensive cleanup - comment out if your upstream prompt is already clean)\nconst cleanPrompt = prompt\n  .replace(/\\b(music|soundtrack|audio|voiceover|dialogue|speaking|singing|song|sfx|sound effect)s?\\b/gi, '')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nreturn {\n  json: {\n    veo_request_body: {\n      prompt: cleanPrompt,\n      duration: 8,\n      aspect_ratio: \"9:16\"\n    }\n  }\n};"
+      },
+      "id": "fb88f1ff-790a-4e71-835b-5b84d7da1224",
+      "name": "Prepare Veo Request Body",
+      "type": "n8n-nodes-base.code",
+      "position": [48, 208],
+      "typeVersion": 2
+    },
+    {
+      "parameters": { "amount": 15 },
+      "id": "b651be44-f303-48b4-8274-5a2c39eeaf98",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [464, 208],
+      "webhookId": "REPLACE_WITH_WAIT_WEBHOOK_ID_2",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "# 🚀 STEP 3 — Publish with Buffer",
+        "height": 404,
+        "width": 2572,
+        "color": 5
+      },
+      "id": "f388dd93-2b21-43c2-b641-6b486cdfede3",
+      "name": "Step 5 - Publishing",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-1008, 560],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $('Set: Bot Token (Placeholder)').first().json.gemini_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": {{ JSON.stringify($('Generate Image Prompt').item.json.output.image_prompt) }} }\n    ]\n  }],\n  \"generationConfig\": {\n    \"responseModalities\": [\"IMAGE\"]\n  }\n}",
+        "options": {
+          "response": {
+            "response": { "responseFormat": "json" }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [256, -240],
+      "id": "f453ce90-f27d-4ff4-9453-f08423a78a45",
+      "name": "NanoBanana image generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const part = $input.first().json.candidates[0].content.parts\n  .find(p => p.inlineData || p.inline_data);\n\nconst inline = part.inlineData || part.inline_data;\n\nreturn {\n  json: {\n    mimeType: inline.mimeType || inline.mime_type\n  },\n  binary: {\n    data: {\n      data: inline.data,\n      mimeType: inline.mimeType || inline.mime_type || \"image/png\",\n      fileName: \"nanobanana-output.png\"\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, -240],
+      "id": "80c068b8-c07e-4b8a-ab34-0d1c383244a9",
+      "name": "Download Edited Image"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $('Set: Bot Token (Placeholder)').first().json.YOUR_BOT_TOKEN }}/getFile?file_id={{ $('Send Photo to Telegram').first().json.result.photo.at(-1).file_id }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1104, -240],
+      "id": "bb16ca36-a339-4b8b-af05-b764503a5fe5",
+      "name": "Get Telegram File URL"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger: Receive Video Idea').first().json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [896, -240],
+      "id": "44a31b9f-a07d-4ff2-a006-19336622f81e",
+      "name": "Send Photo to Telegram",
+      "webhookId": "REPLACE_WITH_SEND_PHOTO_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/{{ $('Veo Generation').first().json.name }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $('Set: Bot Token (Placeholder)').first().json.gemini_api_key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [688, 208],
+      "id": "dc1bb510-1f4e-431f-bd0c-82742da34115",
+      "name": "Check Veo Status"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "x-goog-api-key", "value": "={{ $('Set: Bot Token (Placeholder)').first().json.gemini_api_key }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  instances: [{\n    prompt: $('Prepare Veo Request Body').first().json.veo_request_body.prompt,\n    image: {\n      bytesBase64Encoded: $('Download Edited Image').first().binary.data.data,\n      mimeType: \"image/png\"\n    }\n  }],\n  parameters: {\n    aspectRatio: \"9:16\",\n    durationSeconds: 8,\n    personGeneration: \"allow_adult\"\n  }\n}) }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 60000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [256, 208],
+      "id": "938033b5-6295-42f6-a467-77c9cf8f3099",
+      "name": "Veo Generation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3d8927d8-8510-419c-857a-55178d8feb79",
+              "leftValue": "={{ $json.done }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [896, 208],
+      "id": "b7e7a68a-f884-4e31-9d1d-0a66b3adb88f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "# 🚀 AI Viral Video Workflow — NanoBanana × VEO 3.1 × Buffer\n\nConverts a Telegram message (text + reference image) into a ready-to-publish AI viral video, fully automated.\n\n## 🔥 What this workflow does\n\n### 1️⃣ Image Creation (Gemini 2.5 Flash Image — NanoBanana)\n- User sends a reference image + short text idea on Telegram.\n- OpenAI Vision analyses the reference image.\n- A GPT-4.1-mini agent builds a UGC-style image prompt.\n- Google Gemini 2.5 Flash Image creates the still image.\n\n### 2️⃣ Video Generation (Google Veo 3.1)\n- An AI agent drafts a structured video prompt, caption, title, hashtags.\n- Optimises the prompt for Veo 3.1.\n- Google Veo 3.1 generates a 9:16 video (8s) using the NanoBanana image as reference.\n- Polls the long-running operation until ready.\n- Downloads the finished video and posts it back to Telegram.\n\n### 3️⃣ Multi-Platform Publishing (Buffer)\n- Hosts the video temporarily via Telegram to get a public URL.\n- Publishes to X (Twitter) via Buffer's GraphQL API.\n- Easily extensible to Instagram, TikTok, LinkedIn — just duplicate the Buffer node with a new channelId.\n\n## ⚙️ Requirements\n\n1. Telegram bot — create via @BotFather, copy the token.\n2. Google AI Studio API key with billing enabled (Veo is paid).\n3. OpenAI API key — for GPT-4o vision + script writing.\n4. Buffer API key + channel IDs.\n5. n8n (cloud or self-hosted).\n\n## 🔐 Credentials to paste into the Set node\n\n| Field | Purpose |\n|---|---|\n| YOUR_BOT_TOKEN | Telegram bot token |\n| gemini_api_key | Google Gemini API key (NanoBanana + Veo) |\n| buffer_access_token | Buffer API token |\n| buffer_channel_id_x | Buffer channel ID for X |\n| CAPTION | Auto-populated from the Telegram message |\n\n## 💰 Approximate cost per run\n\n- Gemini NanoBanana image: ~$0.04\n- Veo 3.1 video (8s): ~$3.20 (or ~$1.60 with Veo 3.1 Fast)\n- GPT-4o calls: ~$0.05\n- Buffer + Telegram: free\n- Total: ~$3.30 per video (or ~$1.70 with Fast)\n\n## 💡 Tips\n\n- Avoid prompts that describe music, dialogue, or sound effects — Veo's audio safety filter is aggressive.\n- Telegram file URLs contain your bot token — rotate before sharing any exported workflow.\n- For speed, use veo-3.1-fast-generate-preview: half the cost, 2-3x faster.",
+        "height": 1300,
+        "width": 652
+      },
+      "id": "e1bcf2d5-2a24-491b-bb39-a2f8a69f7506",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-1680, -320],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $('Set: Bot Token (Placeholder)').first().json.YOUR_BOT_TOKEN }}/getFile?file_id={{ $('Send Video to Telegram').first().json.result.video.file_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-800, 720],
+      "id": "138a957b-186b-4587-98c3-0aa39f6a202e",
+      "name": "Get Video File URL"
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{ $('Telegram Trigger: Receive Video Idea').first().json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Your video is ready! 🎥"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1328, 208],
+      "id": "0abe5216-5e99-43d9-b14f-ecd9a6fa8054",
+      "name": "Send Video to Telegram",
+      "webhookId": "REPLACE_WITH_SEND_VIDEO_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger: Receive Video Idea').first().json.message.chat.id }}",
+        "text": "=✅ Published to X!\n\n🎬 {{ $('Parse GPT Response').first().json.title || 'Untitled' }}\n\n📝 {{ $('Parse GPT Response').first().json.caption || '' }}\n\n🏷️ {{ $('Parse GPT Response').first().json.hashtags_string || '' }}\n\n📌 Status: {{ $('Buffer: Publish Video').first().json.data.createPost.post.status }}\n🔗 View in Buffer: https://publish.buffer.com/channels/{{ $('Set: Bot Token (Placeholder)').first().json.buffer_channel_id_x }}/posts/{{ $('Buffer: Publish Video').first().json.data.createPost.post.id }}",
+        "additionalFields": {}
+      },
+      "id": "8d1cd464-3fe8-4b23-b282-2761d192a495",
+      "name": "Notify: Post Published",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-368, 720],
+      "webhookId": "REPLACE_WITH_NOTIFY_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Telegram API"
+        }
+      },
+      "notes": "Sends a success notification to the same Telegram chat that triggered the workflow, with a link to the post in the Buffer dashboard."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.buffer.com/graphql",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ `Bearer ${$('Set: Bot Token (Placeholder)').first().json.buffer_access_token.trim()}` }}"
+            },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  query: `mutation CreatePost($input: CreatePostInput!) {\n    createPost(input: $input) {\n      __typename\n      ... on PostActionSuccess { post { id status } }\n      ... on MutationError { message }\n    }\n  }`,\n  variables: {\n    input: {\n      channelId: $('Set: Bot Token (Placeholder)').first().json.buffer_channel_id_x,\n      text: (($('Parse GPT Response').first().json.caption || '') + ' ' + ($('Parse GPT Response').first().json.hashtags_string || '')).trim(),\n      mode: \"shareNow\",\n      schedulingType: \"automatic\",\n      assets: {\n        videos: [{\n          url: `https://api.telegram.org/file/bot${$('Set: Bot Token (Placeholder)').first().json.YOUR_BOT_TOKEN}/${$('Get Video File URL').first().json.result.file_path}`\n        }]\n      }\n    }\n  }\n}) }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "id": "78bec343-c9e2-4188-bd54-da6529575333",
+      "name": "Buffer: Publish Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-592, 720],
+      "notes": "Publishes via Buffer's GraphQL API at api.buffer.com/graphql with Bearer auth."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wait":                                    { "main": [[{ "node": "Check Veo Status",                  "type": "main", "index": 0 }]] },
+    "Think":                                   { "ai_tool": [[{ "node": "AI Agent: Generate Video Script","type": "ai_tool", "index": 0 }]] },
+    "Download Video":                          { "main": [[{ "node": "Send Video to Telegram",            "type": "main", "index": 0 }]] },
+    "LLM: OpenAI Chat":                        { "ai_languageModel": [[{ "node": "Generate Image Prompt", "type": "ai_languageModel", "index": 0 }]] },
+    "OpenAI Chat Model":                       { "ai_languageModel": [[{ "node": "AI Agent: Generate Video Script", "type": "ai_languageModel", "index": 0 }]] },
+    "Set Master Prompt":                       { "main": [[{ "node": "AI Agent: Generate Video Script",   "type": "main", "index": 0 }]] },
+    "Parse GPT Response":                      { "main": [[{ "node": "Optimize Prompt for Veo",           "type": "main", "index": 0 }]] },
+    "Wait for Image Edit":                     { "main": [[{ "node": "Download Edited Image",             "type": "main", "index": 0 }]] },
+    "Generate Image Prompt":                   { "main": [[{ "node": "NanoBanana image generator",       "type": "main", "index": 0 }]] },
+    "Optimize Prompt for Veo":                 { "main": [[{ "node": "Prepare Veo Request Body",          "type": "main", "index": 0 }]] },
+    "Prepare Veo Request Body":                { "main": [[{ "node": "Veo Generation",                   "type": "main", "index": 0 }]] },
+    "Structured Output Parser":                { "ai_outputParser": [[{ "node": "AI Agent: Generate Video Script", "type": "ai_outputParser", "index": 0 }]] },
+    "Telegram API: Get File URL":              { "main": [[{ "node": "OpenAI Vision: Analyze Reference Image", "type": "main", "index": 0 }]] },
+    "Set: Bot Token (Placeholder)":            { "main": [[{ "node": "Telegram API: Get File URL",        "type": "main", "index": 0 }]] },
+    "LLM: Structured Output Parser":           { "ai_outputParser": [[{ "node": "Generate Image Prompt",  "type": "ai_outputParser", "index": 0 }]] },
+    "AI Agent: Generate Video Script":         { "main": [[{ "node": "Parse GPT Response",                "type": "main", "index": 0 }]] },
+    "Telegram Trigger: Receive Video Idea":    { "main": [[{ "node": "Set: Bot Token (Placeholder)",      "type": "main", "index": 0 }]] },
+    "OpenAI Vision: Analyze Reference Image":  { "main": [[{ "node": "Generate Image Prompt",             "type": "main", "index": 0 }]] },
+    "NanoBanana image generator":              { "main": [[{ "node": "Wait for Image Edit",               "type": "main", "index": 0 }]] },
+    "Download Edited Image":                   { "main": [[{ "node": "Send Photo to Telegram",            "type": "main", "index": 0 }]] },
+    "Get Telegram File URL":                   { "main": [[{ "node": "Set Master Prompt",                 "type": "main", "index": 0 }]] },
+    "Send Photo to Telegram":                  { "main": [[{ "node": "Get Telegram File URL",             "type": "main", "index": 0 }]] },
+    "Veo Generation":                          { "main": [[{ "node": "Wait",                              "type": "main", "index": 0 }]] },
+    "Check Veo Status":                        { "main": [[{ "node": "If",                                "type": "main", "index": 0 }]] },
+    "If":                                      { "main": [
+      [{ "node": "Download Video", "type": "main", "index": 0 }],
+      [{ "node": "Wait",           "type": "main", "index": 0 }]
+    ]},
+    "Send Video to Telegram":                  { "main": [[{ "node": "Get Video File URL",                "type": "main", "index": 0 }]] },
+    "Get Video File URL":                      { "main": [[{ "node": "Buffer: Publish Video",             "type": "main", "index": 0 }]] },
+    "Buffer: Publish Video":                   { "main": [[{ "node": "Notify: Post Published",            "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
