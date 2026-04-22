@@ -1,0 +1,377 @@
+{
+  "name": "Trending Topics → Blog + X (Marketing Content Auto-Publish)",
+  "nodes": [
+    {
+      "parameters": { "options": {} },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [192, 0],
+      "id": "60948148-2aa7-4346-b50f-4a3c71fb27de",
+      "name": "When chat message received",
+      "webhookId": "REPLACE_WITH_CHAT_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "returnAll": true,
+        "filters": {
+          "publishedAfter": "={{ new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }}",
+          "q": "={{ $json.chatInput }}",
+          "regionCode": "ES"
+        },
+        "options": { "order": "relevance" }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [608, 0],
+      "id": "08b0b305-63c0-49b6-9900-f158c942ce5b",
+      "name": "Get many videos",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "YouTube API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEETS_DOC_ID",
+          "mode": "list",
+          "cachedResultName": "Topics",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "youtube",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.id.videoId }}",
+            "Title": "={{ $json.snippet.title }}",
+            "Description": "={{ $json.snippet.description }}",
+            "Channel": "={{ $json.snippet.channelTitle }}",
+            "Publish Time": "={{ $json.snippet.publishTime }}",
+            "Thumbnail URL": "={{ $json.snippet.thumbnails.high.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "ID",            "displayName": "ID",            "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Title",         "displayName": "Title",         "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Description",   "displayName": "Description",   "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Thumbnail URL", "displayName": "Thumbnail URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Thumbnail",     "displayName": "Thumbnail",     "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Channel",       "displayName": "Channel",       "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Publish Time",  "displayName": "Publish Time",  "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Publish",       "displayName": "Publish",       "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1104, 0],
+      "id": "5f2df914-3375-4463-baa4-ab65a49bb987",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Google Sheets API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/blogger/v3/blogs/REPLACE_WITH_BLOGGER_BLOG_ID/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"kind\": \"blogger#post\",\n  \"title\": {{ JSON.stringify($('AI Agent').item.json.output.blog.blog_title) }},\n  \"content\": {{ JSON.stringify($('AI Agent').item.json.output.blog.blog_content) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1056, 720],
+      "id": "05887fde-55e5-4490-bf12-504ac26eef5e",
+      "name": "Publish to Blogger",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Blogger OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [128, 768],
+      "id": "463f57f2-b000-4c90-b2a0-beb534c9d72e",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEETS_DOC_ID",
+          "mode": "list",
+          "cachedResultName": "Topics",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "youtube",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "filtersUI": {
+          "values": [
+            { "lookupColumn": "Publish", "lookupValue": "yes" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [336, 768],
+      "id": "0ad5e53f-b00a-488a-b84a-ac979a6c1cae",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Google Sheets API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Based on this title \"{{ $json.Title }}\" and description \"{{ $json.Description }}\" generate a Blog Post optimized for SEO and a X post. The output will be minimized HTML without break lines.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [544, 752],
+      "id": "efc4d356-f99a-4f19-884c-3aae617fc40d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "gpt-4.1-mini" },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [544, 944],
+      "id": "7f96f3a7-0bd8-4840-8827-cbd2bcebaad8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"blog\": {\n    \"network\": \"blog\",\n    \"blog_title\": \"Title of the post\",\n    \"blog_content\": \"Content of the post\"\n  },\n  \"x\": {\n    \"network\": \"x\",\n    \"x_content\": \"Content of the tweet\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [704, 928],
+      "id": "cb5fc918-32d1-4874-8ca2-6af3395a7e66",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "url": "https://trends.google.com/trending/rss?geo=ES",
+        "options": {}
+      },
+      "id": "9b0e443a-978d-4670-9f26-03875d6496a1",
+      "name": "Google Trends RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [560, 336],
+      "executeOnce": true,
+      "retryOnFail": true,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "options": { "explicitArray": false, "normalize": true }
+      },
+      "id": "b4ad5471-3db6-4f50-89d9-cb8b5880130f",
+      "name": "Parse XML",
+      "type": "n8n-nodes-base.xml",
+      "position": [912, 336],
+      "executeOnce": true,
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "25d7e553-9678-40ad-bb69-e4eb4bce4d11", "name": "min_traffic", "type": "number", "value": 500 },
+            { "id": "decd0a3d-ddc5-45c3-a56f-ee1f14705019", "name": "max_results", "type": "number", "value": 3 },
+            { "id": "12cdd78a-45a7-499e-8fe5-0ab6a7da8a10", "name": "jina_key",    "type": "string", "value": "" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "29e2c663-8535-4375-a244-b493f9339211",
+      "name": "CONFIG",
+      "type": "n8n-nodes-base.set",
+      "position": [112, 336],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEETS_DOC_ID",
+          "mode": "list",
+          "cachedResultName": "Topics",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_TRENDS_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "google trends",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.rss.channel.item }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "ID",    "displayName": "ID",    "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Title", "displayName": "Title", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1280, 336],
+      "id": "25e02287-940f-4cc3-9401-1550e14b2a12",
+      "name": "Append trend to sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PLEASE_LINK_AFTER_IMPORT",
+          "name": "Google Sheets API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.buffer.com/graphql",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "=Bearer REPLACE_WITH_BUFFER_ACCESS_TOKEN" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  query: `mutation CreatePost($input: CreatePostInput!) {\n    createPost(input: $input) {\n      __typename\n      ... on PostActionSuccess { post { id status } }\n      ... on MutationError { message }\n    }\n  }`,\n  variables: {\n    input: {\n      channelId: \"REPLACE_WITH_BUFFER_CHANNEL_ID\",\n      text: ($('AI Agent').first().json.output.x.x_content || '').trim(),\n      mode: \"shareNow\",\n      schedulingType: \"automatic\"\n    }\n  }\n}) }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "id": "5d36dffc-2e76-4788-9c4b-cbafcdb025e3",
+      "name": "Publish to X via Buffer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1056, 880],
+      "notes": "Publishes the X post via Buffer's GraphQL API."
+    },
+    {
+      "parameters": {
+        "content": "# 📥 STEP 1 — Extract trending topics from YouTube",
+        "height": 256,
+        "width": 1440,
+        "color": 7
+      },
+      "id": "3b1a79cc-da97-42c0-8cb5-1a838c4c9e6d",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [80, -64],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📈 STEP 2 — Extract trending topics from Google Trends",
+        "height": 256,
+        "width": 1440,
+        "color": 7
+      },
+      "id": "92ea6a46-6641-4f18-a1fd-89d795803814",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [80, 256],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# ✍️ STEP 3 — Draft the Blog + X post, then publish",
+        "height": 512,
+        "width": 1456,
+        "color": 7
+      },
+      "id": "f6e360fc-56ec-450a-a334-2a5f2e993866",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [80, 544],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": { "main": [[{ "node": "Get many videos",      "type": "main", "index": 0 }]] },
+    "Get many videos":             { "main": [[{ "node": "Append row in sheet", "type": "main", "index": 0 }]] },
+    "Append row in sheet":         { "main": [[]] },
+    "When clicking 'Execute workflow'": { "main": [[{ "node": "Get row(s) in sheet", "type": "main", "index": 0 }]] },
+    "Get row(s) in sheet":         { "main": [[{ "node": "AI Agent",            "type": "main", "index": 0 }]] },
+    "AI Agent":                    { "main": [[
+      { "node": "Publish to Blogger",     "type": "main", "index": 0 },
+      { "node": "Publish to X via Buffer","type": "main", "index": 0 }
+    ]]},
+    "Publish to Blogger":          { "main": [[]] },
+    "OpenAI Chat Model":           { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Structured Output Parser":    { "ai_outputParser":  [[{ "node": "AI Agent", "type": "ai_outputParser",  "index": 0 }]] },
+    "Google Trends RSS":           { "main": [[{ "node": "Parse XML",             "type": "main", "index": 0 }]] },
+    "Parse XML":                   { "main": [[{ "node": "Append trend to sheet", "type": "main", "index": 0 }]] },
+    "CONFIG":                      { "main": [[{ "node": "Google Trends RSS",     "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}

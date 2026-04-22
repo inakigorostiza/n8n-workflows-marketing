@@ -1,0 +1,15 @@
+# Secrets and local configuration
+.env
+.env.local
+.env.*.local
+.claude/
+.mcp.json
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Node (in case helpers are added later)
+node_modules/

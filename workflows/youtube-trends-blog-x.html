@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trending Topics → Blog + X — n8n Workflows for Marketing · IE Business School</title>
+  <meta name="description" content="Step-by-step guide: an n8n workflow that pulls trending topics from YouTube and Google Trends, drafts a blog post and an X post with GPT, and publishes both automatically." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<header class="hero">
+  <a class="back-link" href="../index.html">← All workflows</a>
+  <div class="hero__eyebrow">
+    <img class="hero__eyebrow-logo" src="../assets/ie-logo.svg" alt="IE Business School" />
+    <span class="hero__eyebrow-divider" aria-hidden="true"></span>
+    <span>n8n Workflows for Marketing · Workflow 01</span>
+  </div>
+  <h1 class="hero__title">Trending topics<br>to blog + <span class="accent">X post</span>.</h1>
+  <p class="hero__lead">
+    A single n8n workflow that listens for a keyword, pulls the most relevant YouTube videos and Google Trends of the last 48 hours, writes an SEO-ready blog post and a matching X post with GPT, and publishes both automatically through Blogger and Buffer.
+  </p>
+  <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:2rem;">
+    <a class="btn btn--primary" href="youtube-trends-blog-x.json" download>
+      Download the workflow (.json)
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </a>
+    <a class="btn btn--ghost" href="#anatomy">Jump to node anatomy</a>
+  </div>
+</header>
+
+<!-- ============================== §01 OVERVIEW ============================== -->
+<section class="section" id="overview">
+  <div class="sec-header">
+    <div class="sec-num">01</div>
+    <div>
+      <span class="sec-eyebrow">Overview</span>
+      <h2 class="sec-title">What this workflow does.</h2>
+      <p class="sec-lead">Three independent mini-flows live in the same canvas. Each one can be triggered on its own — so you can scout YouTube on demand, pull Google Trends on a schedule, and publish drafts once a human has marked them as ready.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card__icon">📥</div>
+      <div class="card__role">Step 1</div>
+      <h3 class="card__title">YouTube scout</h3>
+      <p class="card__text">The chat trigger accepts a keyword from you. n8n searches YouTube for the most relevant videos from the last 48 hours in Spain and writes each one as a new row in the <code>youtube</code> tab of your Google Sheet.</p>
+    </div>
+    <div class="card">
+      <div class="card__icon">📈</div>
+      <div class="card__role">Step 2</div>
+      <h3 class="card__title">Google Trends capture</h3>
+      <p class="card__text">A separate branch hits Google Trends' public RSS feed for Spain, parses the XML, and appends the trending queries to the <code>google trends</code> tab of the same sheet — useful as a complementary signal to what's moving on YouTube.</p>
+    </div>
+    <div class="card">
+      <div class="card__icon">✍️</div>
+      <div class="card__role">Step 3</div>
+      <h3 class="card__title">Draft + publish</h3>
+      <p class="card__text">After you tick <em>Publish = yes</em> on a row, the manual trigger reads it back and asks GPT-4.1-mini to draft (a) an SEO-optimised HTML blog post and (b) a short X post. The blog goes straight to Blogger; the X post is queued through Buffer.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--tip">
+    <div class="callout__icon">💡</div>
+    <div class="callout__body">
+      <h4>Why three flows in one workflow?</h4>
+      <p>Because they share the same Google Sheet as a lightweight database. The sheet lets a non-technical editor <em>curate</em> topics between the automation stages — decide which videos become posts, review the draft copy, rewrite if needed, and only then set the <code>Publish</code> column to <code>yes</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §02 PREREQUISITES ============================== -->
+<section class="section" id="prereqs">
+  <div class="sec-header">
+    <div class="sec-num">02</div>
+    <div>
+      <span class="sec-eyebrow">Prerequisites</span>
+      <h2 class="sec-title">Six accounts, all with free tiers.</h2>
+      <p class="sec-lead">Before you import the workflow, create the accounts below and have each one's API key or OAuth login on hand. None require a credit card to get started.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card card--light">
+      <div class="card__icon">🤖</div>
+      <div class="card__role">Automation host</div>
+      <h3 class="card__title">n8n (Cloud or self-hosted)</h3>
+      <p class="card__text">Sign up at <a href="https://n8n.cloud" target="_blank">n8n.cloud</a> for the 14-day free trial, or run <code>npx n8n</code> locally. Every node you see in this guide runs inside n8n.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">📺</div>
+      <div class="card__role">Source</div>
+      <h3 class="card__title">YouTube Data API v3</h3>
+      <p class="card__text">Enable the API in <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>, create an OAuth 2.0 client, and authorise it against your Google account. n8n will handle the token refresh.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">📊</div>
+      <div class="card__role">Database + editor</div>
+      <h3 class="card__title">Google Sheets</h3>
+      <p class="card__text">Create a new spreadsheet with two tabs: <code>youtube</code> (columns: ID, Title, Description, Thumbnail URL, Channel, Publish Time, Publish) and <code>google trends</code> (columns: ID, Title). Copy the spreadsheet ID from its URL.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon card__icon--logo"><img src="../assets/claude-logo.svg" alt="OpenAI" style="filter: grayscale(1) brightness(.5)"></div>
+      <div class="card__role">Content generator</div>
+      <h3 class="card__title">OpenAI API</h3>
+      <p class="card__text">Sign up at <a href="https://platform.openai.com" target="_blank">platform.openai.com</a>, add pay-as-you-go billing (a few cents per post), and copy your API key. The workflow uses <code>gpt-4.1-mini</code>.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">📝</div>
+      <div class="card__role">Blog destination</div>
+      <h3 class="card__title">Blogger (Google)</h3>
+      <p class="card__text">Create a blog at <a href="https://www.blogger.com" target="_blank">blogger.com</a>. Enable the Blogger API in Google Cloud Console, create an OAuth 2.0 client with the <code>blogger</code> scope, and grab the numeric <strong>blog ID</strong> from the Blogger dashboard URL.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__icon">🔀</div>
+      <div class="card__role">Social publisher</div>
+      <h3 class="card__title">Buffer</h3>
+      <p class="card__text">Sign up at <a href="https://buffer.com" target="_blank">buffer.com</a>, connect your X (Twitter) account as a channel, then go to <em>Account → Apps & Extras</em> to create an API access token. Copy the channel ID from the channel's URL.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--warn">
+    <div class="callout__icon">⚠️</div>
+    <div class="callout__body">
+      <h4>Write these five values down before importing</h4>
+      <p>You'll paste them into the workflow once: the <strong>Google Sheets spreadsheet ID</strong>, the <strong>Blogger blog ID</strong>, the <strong>Buffer access token</strong>, the <strong>Buffer channel ID</strong>, and the <strong>numeric gid</strong> of your <code>google trends</code> tab (it's in the sheet's URL after <code>#gid=</code>).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §03 QUICK START ============================== -->
+<section class="section" id="quick-start">
+  <div class="sec-header">
+    <div class="sec-num">03</div>
+    <div>
+      <span class="sec-eyebrow">Quick start</span>
+      <h2 class="sec-title">Import the workflow in four clicks.</h2>
+      <p class="sec-lead">If you just want to see it running, follow these four steps. The step-by-step build from scratch is in §05.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow__step">
+      <span class="flow__num">01</span>
+      <h5>Download the JSON</h5>
+      <p>Save <a href="youtube-trends-blog-x.json" download>youtube-trends-blog-x.json</a> from the link at the top of this page.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">02</span>
+      <h5>Import into n8n</h5>
+      <p>In n8n: <strong>Workflows → Import from File</strong> → pick the JSON. All 17 nodes land on the canvas, pre-wired and annotated.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">03</span>
+      <h5>Replace every <code>REPLACE_WITH_*</code></h5>
+      <p>Open each node that shows a red warning. Swap placeholders for your real IDs and tokens — spreadsheet ID, Blogger blog ID, Buffer token + channel, and the trends tab gid.</p>
+    </div>
+    <div class="flow__step">
+      <span class="flow__num">04</span>
+      <h5>Link the four credentials</h5>
+      <p>Attach your YouTube, Google Sheets, OpenAI and Blogger OAuth credentials in the nodes that ask for them. Hit <strong>Execute workflow</strong> on either branch to run it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §04 ANATOMY ============================== -->
+<section class="section" id="anatomy">
+  <div class="sec-header">
+    <div class="sec-num">04</div>
+    <div>
+      <span class="sec-eyebrow">Node anatomy</span>
+      <h2 class="sec-title">What each node does, in detail.</h2>
+      <p class="sec-lead">Fourteen functional nodes plus three sticky notes. Read the three flows top-to-bottom and you can spot exactly where each piece of data comes from and where it's going.</p>
+    </div>
+  </div>
+
+  <h3 class="h-sub">Flow A · YouTube scout (chat → sheet)</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A1</span><span class="node-row__emoji">💬</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">When chat message received</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.chatTrigger</div>
+        <p class="node-row__text">Opens a hosted chat UI where you type a keyword. Whatever the user types lands in <code>{{ $json.chatInput }}</code> for the rest of the flow to consume. Great for on-demand scouting — replace with a <em>Schedule Trigger</em> if you want a nightly crawl.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>—</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · <code>chatInput</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A2</span><span class="node-row__emoji">📺</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Get many videos</h4>
+        <div class="node-row__kind">n8n-nodes-base.youTube · Resource: Video · Operation: Get Many</div>
+        <p class="node-row__text">Searches YouTube for videos matching <code>chatInput</code>, restricted to uploads from the last 48 h in Spain (<code>regionCode: ES</code>), ordered by relevance. Returns one item per video with snippet + id fields.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 keyword</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>N items · full YouTube snippets</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>YouTube OAuth2 — link after import.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">A3</span><span class="node-row__emoji">📊</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Append row in sheet</h4>
+        <div class="node-row__kind">n8n-nodes-base.googleSheets · Operation: Append · Tab: youtube</div>
+        <p class="node-row__text">Writes one row per video to the <code>youtube</code> tab of your spreadsheet, mapping <code>id.videoId</code> → ID, <code>snippet.title</code> → Title, <code>snippet.description</code> → Description, <code>snippet.channelTitle</code> → Channel, <code>snippet.publishTime</code> → Publish Time, <code>snippet.thumbnails.high.url</code> → Thumbnail URL. The <code>Publish</code> column is left empty so an editor can tick it later.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>N items</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>N confirmed rows</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>Google Sheets OAuth2.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="h-sub">Flow B · Google Trends capture (config → RSS → sheet)</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B1</span><span class="node-row__emoji">📌</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">CONFIG</h4>
+        <div class="node-row__kind">n8n-nodes-base.set</div>
+        <p class="node-row__text">Holds three tuneable parameters: <code>min_traffic</code> (500), <code>max_results</code> (3), and <code>jina_key</code> (empty for now). Acts as a single source of truth so you can change the thresholds without touching the RSS or Sheets nodes.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 item (manual kick-off)</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · 3 config fields</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B2</span><span class="node-row__emoji">📈</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Google Trends RSS</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · GET trends.google.com/trending/rss?geo=ES</div>
+        <p class="node-row__text">Fetches Spain's public trending-searches RSS feed. <code>executeOnce: true</code> means it fires once per workflow run, not once per upstream item. <code>retryOnFail</code> is enabled because the endpoint is sometimes flaky.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 item (config)</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · raw XML body</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B3</span><span class="node-row__emoji">📄</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Parse XML</h4>
+        <div class="node-row__kind">n8n-nodes-base.xml</div>
+        <p class="node-row__text">Turns the RSS payload into a JSON tree. <code>explicitArray: false</code> and <code>normalize: true</code> keep the output shallow and trim whitespace — easier to reference downstream via <code>$json.rss.channel.item</code>.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 item · XML</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 item · JSON tree</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">B4</span><span class="node-row__emoji">📊</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Append trend to sheet</h4>
+        <div class="node-row__kind">n8n-nodes-base.googleSheets · Tab: google trends</div>
+        <p class="node-row__text">Writes the trending queries to the <code>google trends</code> tab. The Title column receives the whole <code>rss.channel.item</code> array so you can see every trend per run on a single row (or split it with a downstream <em>Item Lists</em> node if you prefer one-row-per-trend).</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 JSON tree</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 confirmed row</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="h-sub">Flow C · Draft + publish (manual → AI → Blogger + Buffer)</h3>
+  <div class="node-detail">
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C1</span><span class="node-row__emoji">🎬</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">When clicking 'Execute workflow'</h4>
+        <div class="node-row__kind">n8n-nodes-base.manualTrigger</div>
+        <p class="node-row__text">Manual kick-off for the publishing branch. In production, swap this for a <em>Schedule Trigger</em> firing every morning, or a <em>Google Sheets Trigger</em> that fires the moment a row's <code>Publish</code> column flips to <code>yes</code>.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>—</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>1 start signal</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C2</span><span class="node-row__emoji">🔎</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Get row(s) in sheet</h4>
+        <div class="node-row__kind">n8n-nodes-base.googleSheets · Lookup filter: Publish = yes</div>
+        <p class="node-row__text">Reads every row from the <code>youtube</code> tab where the <code>Publish</code> column equals <code>yes</code>. That's your curation gate — any row an editor hasn't marked is skipped.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>1 signal</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>K items (ready-to-publish topics)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C3</span><span class="node-row__emoji">🧠</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">AI Agent</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.agent · promptType: define</div>
+        <p class="node-row__text">The orchestrator. Its prompt template reads <em>"Based on this title <code>{{ Title }}</code> and description <code>{{ Description }}</code>, generate a blog post optimised for SEO and an X post. Output minimised HTML without break lines."</em> The node connects to two sub-nodes: the OpenAI model (C4) and a structured output parser (C5) that enforces a strict JSON shape.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>K topic rows</div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>K items · <code>output.blog</code> + <code>output.x</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C4</span><span class="node-row__emoji">🤖</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">OpenAI Chat Model</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.lmChatOpenAi · gpt-4.1-mini</div>
+        <p class="node-row__text">Sub-node wired into the AI Agent's <code>ai_languageModel</code> input. Uses the cheap-and-fast <em>gpt-4.1-mini</em>; swap for <em>gpt-4.1</em> if you want richer copy at higher cost.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>OpenAI API key.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C5</span><span class="node-row__emoji">🧾</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Structured Output Parser</h4>
+        <div class="node-row__kind">@n8n/n8n-nodes-langchain.outputParserStructured</div>
+        <p class="node-row__text">Forces the model to return a strict JSON object with two branches: <code>blog: { network, blog_title, blog_content }</code> and <code>x: { network, x_content }</code>. Everything downstream references the same predictable shape.</p>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C6</span><span class="node-row__emoji">📝</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Publish to Blogger</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · POST googleapis.com/blogger/v3/blogs/{id}/posts</div>
+        <p class="node-row__text">Sends a signed OAuth2 request to Blogger with a JSON body containing <code>title</code> and <code>content</code> from the agent's blog output. Uses n8n's generic OAuth2 credential — so the same credential works for any Google API, not just Blogger.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>Published post URL in response</div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Credential</span>Blogger OAuth2.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="node-row">
+      <div class="node-row__rail"><span class="node-row__num">C7</span><span class="node-row__emoji">✉️</span></div>
+      <div class="node-row__body">
+        <h4 class="node-row__title">Publish to X via Buffer</h4>
+        <div class="node-row__kind">n8n-nodes-base.httpRequest · POST api.buffer.com/graphql</div>
+        <p class="node-row__text">Calls Buffer's GraphQL <code>createPost</code> mutation with the X post content, the target channelId, and <code>mode: shareNow</code>. Buffer then fans it out to the connected X account. Authorisation is a Bearer token in the header.</p>
+        <div class="node-row__meta">
+          <div class="node-row__meta-item"><span class="node-row__label">In</span>K items · agent's <code>output.x.x_content</code></div>
+          <div class="node-row__meta-item"><span class="node-row__label">Out</span>K GraphQL responses with <code>post.id</code> + <code>status</code></div>
+          <div class="node-row__meta-item"><span class="node-row__label node-row__label--warn">Gotcha</span>The Buffer token is pasted as a plain header value. Rotate it in Buffer if it ever leaks.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================== §05 BUILD FROM SCRATCH ============================== -->
+<section class="section" id="build">
+  <div class="sec-header">
+    <div class="sec-num">05</div>
+    <div>
+      <span class="sec-eyebrow">Build from scratch</span>
+      <h2 class="sec-title">Step-by-step — recreate the canvas in 20 minutes.</h2>
+      <p class="sec-lead">Skip this section if you imported the JSON. If you're building it to learn the n8n UI, follow the steps below. Everywhere it says <em>Add node</em>, press <kbd>Tab</kbd> inside n8n and type the name.</p>
+    </div>
+  </div>
+
+  <h3 class="h-sub">Flow A · YouTube scout</h3>
+
+  <div class="prompt">
+    <div class="prompt__badge">A1</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Add the chat trigger</span>
+        <span class="prompt__artefact">→ When chat message received</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"Chat Trigger"</strong> (from the LangChain nodes). Leave every parameter on its default. Save the workflow — the node gives you a public chat URL you can test with.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">A2</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Add the YouTube search</span>
+        <span class="prompt__artefact">→ Get many videos</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"YouTube"</strong>. Resource: <code>Video</code>. Operation: <code>Get Many</code>. Return All: <code>true</code>. Filters — Q: <code>{{ $json.chatInput }}</code>, Region Code: <code>ES</code>, Published After: <code>{{ new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }}</code>. Options → Order: <code>relevance</code>. Create a <strong>YouTube OAuth2</strong> credential and link it. Connect Chat Trigger → YouTube.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">A3</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Write each video to Google Sheets</span>
+        <span class="prompt__artefact">→ Append row in sheet</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"Google Sheets"</strong>. Operation: <code>Append</code>. Document: pick your spreadsheet. Sheet: <code>youtube</code>. Mapping: ID=<code>{{ $json.id.videoId }}</code>, Title=<code>{{ $json.snippet.title }}</code>, Description=<code>{{ $json.snippet.description }}</code>, Channel=<code>{{ $json.snippet.channelTitle }}</code>, Publish Time=<code>{{ $json.snippet.publishTime }}</code>, Thumbnail URL=<code>{{ $json.snippet.thumbnails.high.url }}</code>. Leave Publish blank. Link a <strong>Google Sheets OAuth2</strong> credential.</div>
+    </div>
+  </div>
+
+  <h3 class="h-sub">Flow B · Google Trends</h3>
+
+  <div class="prompt">
+    <div class="prompt__badge">B1</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Drop in a CONFIG node</span>
+        <span class="prompt__artefact">→ CONFIG (Set)</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"Edit Fields (Set)"</strong>, rename to <code>CONFIG</code>. Add three fields: <code>min_traffic</code> (Number, 500), <code>max_results</code> (Number, 3), <code>jina_key</code> (String, empty).</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">B2</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Fetch the RSS feed</span>
+        <span class="prompt__artefact">→ Google Trends RSS (HTTP Request)</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"HTTP Request"</strong>. Method: GET. URL: <code>https://trends.google.com/trending/rss?geo=ES</code>. Node settings → Execute Once: on. Retry On Fail: on. Connect CONFIG → HTTP Request.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">B3</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Parse the XML</span>
+        <span class="prompt__artefact">→ Parse XML</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"XML"</strong>. Mode: <code>XML to JSON</code>. Options → Explicit Array: <code>false</code>, Normalize: <code>true</code>. Connect HTTP Request → XML.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">B4</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Append the trend to Sheets</span>
+        <span class="prompt__artefact">→ Append trend to sheet</span>
+      </div>
+      <div class="prompt__quote">Duplicate the A3 Google Sheets node. Change Sheet to <code>google trends</code>. Mapping: Title = <code>{{ $json.rss.channel.item }}</code>. Connect XML → new Google Sheets node.</div>
+    </div>
+  </div>
+
+  <h3 class="h-sub">Flow C · Draft + publish</h3>
+
+  <div class="prompt">
+    <div class="prompt__badge">C1</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Manual Trigger + filtered read</span>
+        <span class="prompt__artefact">→ Get row(s) in sheet</span>
+      </div>
+      <div class="prompt__quote">Add a <strong>Manual Trigger</strong>. Add a <strong>Google Sheets</strong> node, operation <code>Get Row(s)</code>, same document, sheet <code>youtube</code>. Filters → Lookup Column: <code>Publish</code>, Lookup Value: <code>yes</code>. Wire Manual Trigger → Google Sheets.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">C2</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">AI Agent with the prompt template</span>
+        <span class="prompt__artefact">→ AI Agent + OpenAI model + Structured output parser</span>
+      </div>
+      <div class="prompt__quote">Add node → <strong>"AI Agent"</strong> (LangChain). Prompt Type: <code>define</code>. Text: <em>Based on this title "{{ $json.Title }}" and description "{{ $json.Description }}" generate a Blog Post optimized for SEO and a X post. The output will be minimized HTML without break lines.</em> Has Output Parser: on. Then add two sub-nodes: <strong>OpenAI Chat Model</strong> (model <code>gpt-4.1-mini</code>) wired into the agent's <code>ai_languageModel</code> slot; and <strong>Structured Output Parser</strong> with a JSON schema example describing <code>{ blog: { network, blog_title, blog_content }, x: { network, x_content } }</code>, wired into <code>ai_outputParser</code>.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">C3</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Publish to Blogger</span>
+        <span class="prompt__artefact">→ HTTP Request (POST Blogger API)</span>
+      </div>
+      <div class="prompt__quote">Add <strong>HTTP Request</strong>. Method: POST. URL: <code>https://www.googleapis.com/blogger/v3/blogs/&lt;YOUR_BLOG_ID&gt;/posts</code>. Authentication: <code>Generic Credential Type → OAuth2 API</code>. Create a new OAuth2 credential with the Blogger scope. Header: <code>Content-Type: application/json</code>. Body: JSON, expression: <code>{"kind":"blogger#post","title":{{ JSON.stringify($('AI Agent').item.json.output.blog.blog_title) }},"content":{{ JSON.stringify($('AI Agent').item.json.output.blog.blog_content) }}}</code>. Wire AI Agent → this node.</div>
+    </div>
+  </div>
+
+  <div class="prompt">
+    <div class="prompt__badge">C4</div>
+    <div class="prompt__body">
+      <div class="prompt__head">
+        <span class="prompt__title">Publish to X via Buffer</span>
+        <span class="prompt__artefact">→ HTTP Request (POST Buffer GraphQL)</span>
+      </div>
+      <div class="prompt__quote">Add another <strong>HTTP Request</strong>. Method: POST. URL: <code>https://api.buffer.com/graphql</code>. Headers: <code>Authorization: Bearer &lt;YOUR_BUFFER_TOKEN&gt;</code>, <code>Content-Type: application/json</code>. Body: JSON, expression that wraps a GraphQL <code>createPost</code> mutation with <code>channelId</code>, <code>text: ($('AI Agent').first().json.output.x.x_content || '').trim()</code>, <code>mode: shareNow</code>, <code>schedulingType: automatic</code>. Wire AI Agent → this node as well (agent has a second outgoing connection).</div>
+    </div>
+  </div>
+
+  <div class="callout callout--good">
+    <div class="callout__icon">✅</div>
+    <div class="callout__body">
+      <h4>Test before you activate</h4>
+      <p>Run each branch on its own first. Flow A via the chat trigger; Flow B via clicking Execute on the CONFIG node; Flow C by flipping <code>Publish = yes</code> on a test row and clicking Execute. Only activate the workflow once all three branches pass.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== §06 CUSTOMISE ============================== -->
+<section class="section" id="customise">
+  <div class="sec-header">
+    <div class="sec-num">06</div>
+    <div>
+      <span class="sec-eyebrow">Customise</span>
+      <h2 class="sec-title">Make it yours in five edits.</h2>
+      <p class="sec-lead">The workflow's shape generalises well. Below are the most useful tweaks — each is a single-node change.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card card--light">
+      <div class="card__role">Region</div>
+      <h3 class="card__title">Change the country</h3>
+      <p class="card__text">Swap <code>ES</code> in the YouTube node's <code>regionCode</code> and in the Google Trends URL (<code>?geo=ES</code>) for any ISO country code. Spain → Mexico: <code>MX</code>. Argentina: <code>AR</code>.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Time window</div>
+      <h3 class="card__title">Widen the search</h3>
+      <p class="card__text">The YouTube filter currently looks back 48 hours. Change <code>2 * 24 * 60 * 60 * 1000</code> to <code>7 * 24 * 60 * 60 * 1000</code> for a weekly window.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Model</div>
+      <h3 class="card__title">Upgrade the writer</h3>
+      <p class="card__text">Replace <code>gpt-4.1-mini</code> with <code>gpt-4.1</code> for richer copy — roughly 4–8× the cost per post, but noticeably better long-form structure.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Trigger</div>
+      <h3 class="card__title">Run on a schedule</h3>
+      <p class="card__text">Replace the Chat Trigger with a <em>Schedule Trigger</em> and hard-code the keyword in a Set node upstream of YouTube. Same for Flow C — fire it every morning instead of manually.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Destinations</div>
+      <h3 class="card__title">Add LinkedIn + IG</h3>
+      <p class="card__text">Buffer's <code>createPost</code> mutation works the same for every connected channel. Clone the C4 node, swap the <code>channelId</code>, and tweak the agent's output schema to include an <code>ig_content</code> or <code>linkedin_content</code> branch.</p>
+    </div>
+    <div class="card card--light">
+      <div class="card__role">Safety</div>
+      <h3 class="card__title">Require human approval</h3>
+      <p class="card__text">Insert a <em>Wait</em> + <em>Send email</em> after the AI Agent, CC'ing the editor with the draft + an "approve / reject" link. The publishing nodes fire only after a resume webhook is hit.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__brand">
+      <img src="../assets/ie-logo.svg" alt="IE Business School" />
+      n8n Workflows for Marketing
+    </div>
+    <div>
+      Reference project for the <strong>AI Marketing Lab</strong> · IE Business School.<br>
+      <a href="../index.html">← All workflows</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
