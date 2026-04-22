@@ -19,6 +19,10 @@ Each workflow ships with:
 |---|----------|--------------|-------|
 | 01 | [Trending topics → Blog + X post](workflows/youtube-trends-blog-x.html) | Pulls YouTube + Google Trends, drafts copy with GPT-4.1-mini, publishes via Blogger + Buffer. | 14 |
 
+## Credentials
+
+Every external service used by the library is documented in **[credentials.html](credentials.html)** — step-by-step setup for OpenAI, Google Cloud (YouTube + Sheets + Blogger), Buffer, and how to link each one in n8n's credentials panel. A quick-glance checklist at the bottom summarises which tokens, IDs and placeholders a given workflow needs.
+
 ## How to use a workflow
 
 1. Open the guide page (linked above).
