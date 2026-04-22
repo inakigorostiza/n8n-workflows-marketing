@@ -28,6 +28,8 @@
       Download the workflow (.json)
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     </a>
+    <a class="btn btn--ghost" href="https://lovepoemscreator.blogspot.com/" target="_blank">See the live blog ↗</a>
+    <a class="btn btn--ghost" href="https://docs.google.com/spreadsheets/d/1voUu85C0uED6YXrFxakD3wMpdZOFnLCwBKoNIpxmERA/copy" target="_blank">Copy the template sheet ↗</a>
     <a class="btn btn--ghost" href="../credentials.html">Credentials setup →</a>
     <a class="btn btn--ghost" href="#anatomy">Jump to node anatomy</a>
   </div>
@@ -62,6 +64,17 @@
       <div class="card__role">Step 3</div>
       <h3 class="card__title">Draft + publish</h3>
       <p class="card__text">After you tick <em>Publish = yes</em> on a row, the manual trigger reads it back and asks GPT-4.1-mini to draft (a) an SEO-optimised HTML blog post and (b) a short X post. The blog goes straight to Blogger; the X post is queued through Buffer.</p>
+    </div>
+  </div>
+
+  <div class="callout callout--good">
+    <div class="callout__icon">👀</div>
+    <div class="callout__body">
+      <h4>See it running before you build</h4>
+      <p>
+        <strong>Live blog output</strong> · <a href="https://lovepoemscreator.blogspot.com/" target="_blank">lovepoemscreator.blogspot.com</a> — every post was drafted and published by this workflow.<br>
+        <strong>Template spreadsheet</strong> · <a href="https://docs.google.com/spreadsheets/d/1voUu85C0uED6YXrFxakD3wMpdZOFnLCwBKoNIpxmERA/copy" target="_blank">Click to make a copy</a> — opens the reference sheet with the two tabs (<code>youtube</code>, <code>google trends</code>) and column schema already in place.
+      </p>
     </div>
   </div>
 
@@ -165,7 +178,7 @@
     <div class="flow__step">
       <span class="flow__num">03</span>
       <h5>Replace every <code>REPLACE_WITH_*</code></h5>
-      <p>Open each node that shows a red warning. Swap placeholders for your real IDs and tokens — spreadsheet ID, Blogger blog ID, Buffer token + channel, and the trends tab gid.</p>
+      <p>Open each node that shows a red warning. Swap placeholders for your real IDs and tokens — spreadsheet ID (from <a href="https://docs.google.com/spreadsheets/d/1voUu85C0uED6YXrFxakD3wMpdZOFnLCwBKoNIpxmERA/copy" target="_blank">your copy of the template</a>), Blogger blog ID (see the <a href="https://lovepoemscreator.blogspot.com/" target="_blank">live demo blog</a>), Buffer token + channel, and the trends tab gid.</p>
     </div>
     <div class="flow__step">
       <span class="flow__num">04</span>
